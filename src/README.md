@@ -1,12 +1,12 @@
-## INFO POUR MODELISATION
+# INFO POUR MODELISATION
 
-# FONCTION QUE L'ON A
+## FONCTION QUE L'ON A
 
     - Fonction joue qui nous donne une suite de coup (actuellment renvoie 1 element dans la séquence)
 
     - Classe IA dont notre nouvelle classe va hériter
 
-# FONCTION A RAJOUTER
+## FONCTION A RAJOUTER
 
     - Fonction qui prend la position du joueur et renvoie les case sur lesquelles il peut aller
 
@@ -14,7 +14,7 @@
 
     - Fonction qui prend position d'une caisse et donne les direction possible
 
-# NOUVELLE CLASSE 
+## NOUVELLE CLASSE 
 
     - On hérite de IA
 
