@@ -27,7 +27,15 @@ package Modele;
  */
 
 import Global.Configuration;
+import Structures.FAPListe;
+//import Structures.FAPTableau;
 import Structures.Iterateur;
+import Structures.SequenceListe;
+
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class Niveau implements Cloneable {
 	static final int VIDE = 0;
@@ -261,4 +269,134 @@ public class Niveau implements Cloneable {
 	public void fixerMarque(int m, int i, int j) {
 		cases[i][j] = (cases[i][j] & 0xFF) | (m << 8);
 	}
+
+//	SequenceListe<Position> voisinsAccessibles(Position pos){
+//		int ligne = pos.ligne;
+//		int colonne = pos.colonne;
+//		SequenceListe<Position> results = new SequenceListe<Position>();
+//		if( !aMur(ligne-1,colonne) && !aCaisse(ligne-1, colonne)){
+//			// up
+//			results.insereQueue(new Position(ligne-1, colonne));
+//		}
+//		if(!aMur(ligne, colonne-1) && !aCaisse(ligne, colonne-1)){
+//			// left
+//			results.insereQueue(new Position(ligne, colonne-1));
+//		}
+//		if(!aMur(ligne, colonne-1) && !aCaisse(ligne+1, colonne)){
+//			// down
+//			results.insereQueue(new Position(ligne+1, colonne));
+//		}
+//		if(!aMur(ligne, colonne-1) && !aCaisse(ligne, colonne+1)){
+//			// right
+//			results.insereQueue(new Position(ligne, colonne+1));
+//		}
+//
+//		return results;
+//	}
+
+	SequenceListe<Position> positionCaisses(){
+		SequenceListe<Position> listeCaisse = new SequenceListe<Position>();
+
+		for(int ligne = 0; ligne< l; ligne++){
+			for(int colonne = 0; colonne< c; colonne++){
+				if(aCaisse(ligne, colonne)){
+					listeCaisse.insereQueue(new Position(ligne, colonne, 0));
+				}
+			}
+		}
+
+		return listeCaisse;
+	}
+
+	void cheminVers(Position p1, Position p2) {
+		final int[] dx = {-1, 0, 1, 0}; // déplacement en x pour visiter les voisins
+		final int[] dy = {0, 1, 0, -1}; // déplacement en y pour visiter les voisins
+
+		// dijkstra
+		int[][] distances = new int[l][c]; // Tableau des distances à chaque point
+		boolean[][] visited = new boolean[l][c]; // Tableau pour savoir si un point a déjà été visité
+		FAPListe<Position> FAP = new FAPListe<Position>();
+
+		for (int i = 0; i < l; i++) {
+			Arrays.fill(distances[i], 2000);
+		}
+		distances[p1.ligne][p1.colonne] = 0;
+		p1.distance = 0;
+		FAP.insere(p1);
+
+		while (!FAP.estVide()) {
+			Position courant = FAP.extrait();
+
+			// Si le noeud a déjà été visité, on passe au suivant
+			if (visited[courant.ligne][courant.colonne]) {
+				continue;
+			}
+			visited[courant.ligne][courant.colonne] = true;
+
+			// Si on est arrivé à la fin, on peut arrêter la recherche
+			if (courant.ligne == p2.ligne && courant.colonne == p2.colonne) {
+				break;
+			}
+
+			// Parcours des voisins
+			for (int i = 0; i < 4; i++) {
+				Position voisin = new Position(courant.ligne + dx[i], courant.colonne + dy[i], 0);
+
+				// Vérification des limites de la matrice
+				if (voisin.ligne < 0 || voisin.colonne < 0 || voisin.ligne >= l || voisin.colonne >= c) {
+					continue;
+				}
+
+				// Vérification si le voisin est un obstacle
+				if (aMur(voisin.ligne, voisin.colonne) || aCaisse(voisin.ligne, voisin.colonne)) {
+					continue;
+				}
+				int newDistance = courant.distance + 1;
+
+				//
+				if (newDistance < distances[voisin.ligne][voisin.colonne]) {
+					distances[voisin.ligne][voisin.colonne] = newDistance;
+					voisin.distance = newDistance;
+					FAP.insere(voisin);
+				}
+			}
+		}
+
+		affiche_dijkstra(p1, p2, distances);
+	}
+	void affiche_dijkstra(Position p1, Position p2, int[][] distances){
+		final int[] dx = {-1, 0, 1, 0}; // déplacement en x pour visiter les voisins
+		final int[] dy = {0, 1, 0, -1}; // déplacement en y pour visiter les voisins
+
+		// Affichage du chemin le plus court
+		List<Position> path = new ArrayList<>();
+		int endColonne = p2.colonne;
+		int endLigne = p2.ligne;
+		int startColonne = p1.colonne;
+		int startLigne = p1.ligne;
+		while (!(endLigne == startLigne && endColonne == startColonne)) {
+			path.add(new Position(endLigne, endColonne, distances[endLigne][endColonne]));
+			int min = 2000;
+//			int voisinMinLigne;
+//			int voisinMinColonne;
+			for (int i = 0; i < 4; i++) {
+				int nx = endLigne + dx[i];
+				int ny = endColonne + dy[i];
+				if (nx < 0 || ny < 0 || nx >= l || ny >= c) {
+					continue;
+				}
+				if(distances[nx][ny] < min){
+					min = distances[nx][ny];
+					endLigne = nx;
+					endColonne = ny;
+
+				}
+			}
+		}
+		path.add(new Position(startLigne, startColonne, distances[startLigne][startColonne]));
+		Collections.reverse(path);
+		System.out.println("Chemin le plus court : " + path);
+	}
+
+
 }
