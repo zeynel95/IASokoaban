@@ -50,6 +50,10 @@ public class Niveau implements Cloneable {
 	int nbButs;
 	int nbCaissesSurBut;
 
+	final int[] dx = {-1, 0, 1, 0}; // déplacement en x pour visiter les voisins
+	final int[] dy = {0, 1, 0, -1}; // déplacement en y pour visiter les voisins
+
+
 	Niveau() {
 		cases = new int[1][1];
 		l = c = 1;
@@ -308,9 +312,7 @@ public class Niveau implements Cloneable {
 		return listeCaisse;
 	}
 
-	void cheminVers(Position p1, Position p2) {
-		final int[] dx = {-1, 0, 1, 0}; // déplacement en x pour visiter les voisins
-		final int[] dy = {0, 1, 0, -1}; // déplacement en y pour visiter les voisins
+	boolean cheminVers(Position p1, Position p2) {
 
 		// dijkstra
 		int[][] distances = new int[l][c]; // Tableau des distances à chaque point
@@ -362,11 +364,168 @@ public class Niveau implements Cloneable {
 			}
 		}
 
-		affiche_dijkstra(p1, p2, distances);
+
+		if(distances[p2.ligne][p2.colonne] != 2000){
+			affiche_dijkstra(p1, p2, distances);
+			return true;
+		}
+		return false;
+
 	}
+
+	void init_distance_debut(Position pousseur, Position caisse, int[][][] distances){
+//		fait dijkstra pour les 4 voisin,
+//		les voisin accessibles, distance 0
+		for (int i = 0; i < 4; i++) {
+			Position voisin = new Position(caisse.ligne+dx[i], caisse.colonne+dy[i], 0);
+			// Vérification des limites de la matrice
+			if (voisin.ligne < 0 || voisin.colonne < 0 || voisin.ligne >= l || voisin.colonne >= c) {
+				continue;
+			}
+			// Vérification si le voisin est un obstacle
+			if (aMur(voisin.ligne, voisin.colonne) || aCaisse(voisin.ligne, voisin.colonne)) {
+				continue;
+			}
+//			if accessible par dijkstra
+			if(cheminVers(pousseur, voisin)){
+				distances[caisse.ligne][caisse.colonne][i] = 0;
+			}
+		}
+	}
+
+	int find_direction(Position pousseur, Position caisse){
+		if(pousseur.ligne == caisse.ligne){
+			if(pousseur.colonne < caisse.colonne){
+//				left
+				return 0;
+			}
+			// right
+			return 2;
+		} else if (pousseur.colonne == caisse.colonne) {
+			// meme colonne
+			if(pousseur.ligne > caisse.ligne){
+				// down
+				return 1;
+			}
+			// up
+			return 3;
+		}
+//		pousseur pas a cote
+		return -1;
+	}
+
+	boolean cheminCaissePosition(Position pCaisse, Position p2) {
+
+		// dijkstra
+		int[][][] distances = new int[l][c][4]; // Tableau des distances à chaque point
+		boolean[][][] visited = new boolean[l][c][4]; // Tableau pour savoir si un point a déjà été visité
+
+		FAPListe<CaissePousseur> FAP = new FAPListe<CaissePousseur>();
+
+		for (int i = 0; i < l; i++) {
+			for (int j = 0; j < c; j++) {
+				Arrays.fill(distances[i][j], 2000);
+				Arrays.fill(visited[i][j], false);
+			}
+		}
+
+		Position pPousseur = new Position(this.pousseurL, this.pousseurC, 0);
+		init_distance_debut(pPousseur, pCaisse,distances);
+		CaissePousseur cpCourant = new CaissePousseur(pPousseur, pCaisse);
+
+		FAP.insere(cpCourant);
+		CaissePousseur courant;
+		while (!FAP.estVide()) {
+			courant = FAP.extrait();
+
+			// Si le CaissePousseur a déjà été visité, on passe au suivant
+			int movement_direction = find_direction(courant.pousseur, courant.caisse);
+
+			// on saute le premier config ou le jouer n'est pas a cote
+			if(movement_direction != -1){
+				// ici le jouer est a cote de la caisse
+				if (visited[courant.caisse.ligne][courant.caisse.colonne][movement_direction]) {
+					continue;
+				}
+				visited[courant.caisse.ligne][courant.caisse.colonne][movement_direction] = true;
+			};
+
+			// Si on est arrivé à la fin, on peut arrêter la recherche
+			if (courant.caisse.ligne == p2.ligne && courant.caisse.colonne == p2.colonne) {
+				break;
+			}
+
+			// Parcours des voisins
+			for (int i = 0; i < 4; i++) {
+				Position voisin = new Position(courant.caisse.ligne + dx[i], courant.caisse.colonne + dy[i], 0);
+				Position pInverse = new Position(courant.caisse.ligne - dx[i], courant.caisse.colonne - dy[i], 0);
+
+				boolean egal_oldCaisse = voisin.ligne != pCaisse.ligne || voisin.colonne != pCaisse.colonne;
+				boolean egal_actuel = courant.caisse.ligne != pCaisse.ligne || courant.caisse.colonne != pCaisse.colonne;
+
+				// si oldCaisse, ne teste pas
+				// si actuell, test
+				if(egal_oldCaisse || !egal_actuel){
+					// si le voisin est la position de la caisse originel, il faut pas le planter
+					// ici on est dans un caisse different
+
+					// Vérification des limites de la matrice
+					if (voisin.ligne < 0 || voisin.colonne < 0 || voisin.ligne >= l || voisin.colonne >= c) {
+						continue;
+					}
+
+					// Vérification si le voisin est un obstacle
+					if (aMur(voisin.ligne, voisin.colonne) || aCaisse(voisin.ligne, voisin.colonne)) {
+						continue;
+					}
+
+
+
+					//inverse obstacle
+					if(aMur(pInverse.ligne, pInverse.colonne) || aCaisse(pInverse.ligne, pInverse.colonne))
+						continue;
+				}
+
+				Niveau niveauCloneCourant = this.clone();
+				niveauCloneCourant.misAJour(courant.pousseur, pCaisse, courant.caisse);
+
+
+				//inverse pas accessible
+				if(!niveauCloneCourant.cheminVers(courant.pousseur, pInverse))
+					continue;
+
+
+				int newDistance = courant.distance + 1;
+
+
+				if (newDistance < distances[voisin.ligne][voisin.colonne][i]) {
+					distances[voisin.ligne][voisin.colonne][i] = newDistance;
+//																  pousseur,    caisse
+					CaissePousseur prochainCP = new CaissePousseur(courant.caisse, voisin);
+					prochainCP.distance = newDistance;
+					FAP.insere(prochainCP);
+				}
+			}
+		}
+		for(int i = 0; i<4; i++){
+			if(distances[p2.ligne][p2.colonne][i] != 2000){
+	//			affiche_dijkstra(p1, p2, distances);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void misAJour(Position pousseur, Position oldCaisse, Position newCaisse){
+		// met la caisse de old a new
+		this.cases[oldCaisse.ligne][oldCaisse.colonne] = VIDE;
+		ajouteCaisse(newCaisse.ligne, newCaisse.colonne);
+		// met a jour la position de le pousseur
+		this.pousseurC = pousseur.colonne;
+		this.pousseurL = pousseur.ligne;
+	}
+
 	void affiche_dijkstra(Position p1, Position p2, int[][] distances){
-		final int[] dx = {-1, 0, 1, 0}; // déplacement en x pour visiter les voisins
-		final int[] dy = {0, 1, 0, -1}; // déplacement en y pour visiter les voisins
 
 		// Affichage du chemin le plus court
 		List<Position> path = new ArrayList<>();
@@ -397,6 +556,8 @@ public class Niveau implements Cloneable {
 		Collections.reverse(path);
 		System.out.println("Chemin le plus court : " + path);
 	}
+
+
 
 
 }

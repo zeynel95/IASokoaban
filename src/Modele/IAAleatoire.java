@@ -49,9 +49,12 @@ class IAAleatoire extends IA {
 		while (!caisses.estVide()){
 			Position p = caisses.extraitTete();
 			System.out.println("caisse[colonne][ligne]: " + p.colonne + " " + p.ligne);
-			Position pousseur = new Position(niveau.pousseurL, niveau.pousseurC, 0);
-			niveau.cheminVers(pousseur, p);
+//			Position pousseur = new Position(niveau.pousseurL, niveau.pousseurC, 0);
+//			niveau.cheminVers(pousseur, p);
+			Position but = new Position(4, 15, 0);
+			niveau.cheminCaissePosition(p, but);
 		}
+
 		Sequence<Coup> resultat = Configuration.nouvelleSequence();
 		Coup coup = null;
 		boolean mur = true;
