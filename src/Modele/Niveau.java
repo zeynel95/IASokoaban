@@ -526,7 +526,7 @@ public class Niveau implements Cloneable {
 		for(int i = 0; i<4; i++){
 			if(distances[p2.ligne][p2.colonne][i] != 2000){
 				// not implemented
-				//affiche_solution(pCaisse, p2, distances);
+				affiche_solution(pCaisse, p2, distances);
 				return true;
 			}
 		}
@@ -548,7 +548,7 @@ public class Niveau implements Cloneable {
 				end_distance = distances[endLigne][endColonne][i];
 		}
 
-		while (!(endLigne == startLigne && endColonne == startColonne)) {
+		while (end_distance != 0) {
 			path.add(new Position(endLigne, endColonne, end_distance));
 
 			for (int voisin_i = 0; voisin_i < 4; voisin_i++) {
