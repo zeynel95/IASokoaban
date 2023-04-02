@@ -36,6 +36,8 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.lang.Math;
+
 
 public class Niveau implements Cloneable {
 	static final int VIDE = 0;
@@ -366,7 +368,7 @@ public class Niveau implements Cloneable {
 
 
 		if(distances[p2.ligne][p2.colonne] != 2000){
-			affiche_dijkstra(p1, p2, distances);
+//			affiche_dijkstra(p1, p2, distances);
 			return true;
 		}
 		return false;
@@ -388,27 +390,28 @@ public class Niveau implements Cloneable {
 			}
 //			if accessible par dijkstra
 			if(cheminVers(pousseur, voisin)){
-				distances[caisse.ligne][caisse.colonne][i] = 0;
+//				TODO correct the hardcode here
+				distances[caisse.ligne][caisse.colonne][3] = 0;
 			}
 		}
 	}
 
 	int find_direction(Position pousseur, Position caisse){
 		if(pousseur.ligne == caisse.ligne){
-			if(pousseur.colonne < caisse.colonne){
+			if(pousseur.colonne == caisse.colonne - 1)
 //				left
-				return 0;
-			}
-			// right
-			return 2;
+				return 3;
+			else if (pousseur.colonne == caisse.colonne + 1)
+				// right
+				return 1;
 		} else if (pousseur.colonne == caisse.colonne) {
 			// meme colonne
-			if(pousseur.ligne > caisse.ligne){
+			if(pousseur.ligne == caisse.ligne - 1)
 				// down
-				return 1;
-			}
-			// up
-			return 3;
+				return 2;
+			else if (pousseur.ligne == caisse.ligne + 1)
+				// up
+				return 0;
 		}
 //		pousseur pas a cote
 		return -1;
@@ -429,12 +432,17 @@ public class Niveau implements Cloneable {
 			}
 		}
 
+		// met a 0 les voisins accessibles
 		Position pPousseur = new Position(this.pousseurL, this.pousseurC, 0);
 		init_distance_debut(pPousseur, pCaisse,distances);
+//		A*
+		int delta = Math.abs(this.pousseurL - p2.ligne) + Math.abs(this.pousseurC - p2.colonne);
 		CaissePousseur cpCourant = new CaissePousseur(pPousseur, pCaisse);
+		cpCourant.heuristique = delta;
 
 		FAP.insere(cpCourant);
 		CaissePousseur courant;
+
 		while (!FAP.estVide()) {
 			courant = FAP.extrait();
 
@@ -460,12 +468,12 @@ public class Niveau implements Cloneable {
 				Position voisin = new Position(courant.caisse.ligne + dx[i], courant.caisse.colonne + dy[i], 0);
 				Position pInverse = new Position(courant.caisse.ligne - dx[i], courant.caisse.colonne - dy[i], 0);
 
-				boolean egal_oldCaisse = voisin.ligne != pCaisse.ligne || voisin.colonne != pCaisse.colonne;
+				boolean egal_oldCaisse = voisin.ligne == pCaisse.ligne && voisin.colonne == pCaisse.colonne;
 				boolean egal_actuel = courant.caisse.ligne != pCaisse.ligne || courant.caisse.colonne != pCaisse.colonne;
 
-				// si oldCaisse, ne teste pas
+				// si voisin == oldCaisse, ca va etre surement un obstacle, donc on teste pas
 				// si actuell, test
-				if(egal_oldCaisse || !egal_actuel){
+				if(!egal_oldCaisse){
 					// si le voisin est la position de la caisse originel, il faut pas le planter
 					// ici on est dans un caisse different
 
@@ -475,24 +483,29 @@ public class Niveau implements Cloneable {
 					}
 
 					// Vérification si le voisin est un obstacle
-					if (aMur(voisin.ligne, voisin.colonne) || aCaisse(voisin.ligne, voisin.colonne)) {
+					boolean is_oldCaisse = voisin.ligne == pCaisse.ligne && voisin.colonne == pCaisse.colonne;
+					if (aMur(voisin.ligne, voisin.colonne) || (aCaisse(voisin.ligne, voisin.colonne) && is_oldCaisse)) {
 						continue;
 					}
 
 
 
 					//inverse obstacle
-					if(aMur(pInverse.ligne, pInverse.colonne) || aCaisse(pInverse.ligne, pInverse.colonne))
+					is_oldCaisse = pInverse.ligne == pCaisse.ligne && pInverse.colonne == pCaisse.colonne;
+					if(aMur(pInverse.ligne, pInverse.colonne) || (aCaisse(pInverse.ligne, pInverse.colonne) && !is_oldCaisse))
 						continue;
 				}
 
+				// update niveaux pour correct dijkstra jouer -> pInverse
 				Niveau niveauCloneCourant = this.clone();
 				niveauCloneCourant.misAJour(courant.pousseur, pCaisse, courant.caisse);
-
 
 				//inverse pas accessible
 				if(!niveauCloneCourant.cheminVers(courant.pousseur, pInverse))
 					continue;
+
+//				// revert comme on etait avant
+//				niveauCloneCourant.misAJour(pPousseur, courant.caisse, pCaisse);
 
 
 				int newDistance = courant.distance + 1;
@@ -502,18 +515,63 @@ public class Niveau implements Cloneable {
 					distances[voisin.ligne][voisin.colonne][i] = newDistance;
 //																  pousseur,    caisse
 					CaissePousseur prochainCP = new CaissePousseur(courant.caisse, voisin);
+					// A*
+					delta = Math.abs(voisin.ligne - p2.ligne) + Math.abs(voisin.colonne - p2.colonne);
 					prochainCP.distance = newDistance;
+					prochainCP.heuristique = delta;
 					FAP.insere(prochainCP);
 				}
 			}
 		}
 		for(int i = 0; i<4; i++){
 			if(distances[p2.ligne][p2.colonne][i] != 2000){
-	//			affiche_dijkstra(p1, p2, distances);
+				// not implemented
+				//affiche_solution(pCaisse, p2, distances);
 				return true;
 			}
 		}
 		return false;
+	}
+
+	void affiche_solution(Position start, Position end, int[][][] distances){
+		List<Position> path = new ArrayList<>();
+
+		int endColonne = end.colonne;
+		int endLigne = end.ligne;
+		int startColonne = start.colonne;
+		int startLigne = start.ligne;
+		int end_distance = 0;
+		// find max from the 4 directions
+		for(int i = 0; i < 4; i++){
+			int[] case_list = distances[endLigne][endColonne];
+			if(case_list[i] > end_distance && case_list[i] != 2000)
+				end_distance = distances[endLigne][endColonne][i];
+		}
+
+		while (!(endLigne == startLigne && endColonne == startColonne)) {
+			path.add(new Position(endLigne, endColonne, end_distance));
+
+			for (int voisin_i = 0; voisin_i < 4; voisin_i++) {
+				int nx = endLigne + dx[voisin_i];
+				int ny = endColonne + dy[voisin_i];
+				if (nx < 0 || ny < 0 || nx >= l || ny >= c) {
+					continue;
+				}
+
+				for(int direction_i = 0; direction_i < 4; direction_i++){
+					if(distances[nx][ny][direction_i] == end_distance - 1){
+						endLigne = nx;
+						endColonne = ny;
+						end_distance--;
+					}
+				}
+			}
+		}
+
+		path.add(new Position(startLigne, startColonne, 0));
+		Collections.reverse(path);
+		System.out.println("Solution totale : " + path);
+
 	}
 
 	void misAJour(Position pousseur, Position oldCaisse, Position newCaisse){

@@ -4,6 +4,7 @@ public class CaissePousseur implements Comparable<CaissePousseur> {
     Position pousseur;
     Position caisse;
     int distance;
+    int heuristique;
 
     public CaissePousseur(Position pousseur, Position caisse){
         this.pousseur = pousseur;
@@ -12,6 +13,6 @@ public class CaissePousseur implements Comparable<CaissePousseur> {
 
     @Override
     public int compareTo(CaissePousseur other) {
-        return Integer.compare(distance, other.distance);
+        return Integer.compare(distance + heuristique, other.distance + other.heuristique);
     }
 }

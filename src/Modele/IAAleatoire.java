@@ -45,14 +45,15 @@ class IAAleatoire extends IA {
 	@Override
 	public Sequence<Coup> joue() {
 		SequenceListe<Position> caisses = niveau.positionCaisses();
-		System.out.println("Printing caisses du niveau");
+//		System.out.println("Printing caisses du niveau");
 		while (!caisses.estVide()){
 			Position p = caisses.extraitTete();
-			System.out.println("caisse[colonne][ligne]: " + p.colonne + " " + p.ligne);
+//			System.out.println("caisse[colonne][ligne]: " + p.colonne + " " + p.ligne);
 //			Position pousseur = new Position(niveau.pousseurL, niveau.pousseurC, 0);
 //			niveau.cheminVers(pousseur, p);
 			Position but = new Position(4, 15, 0);
 			niveau.cheminCaissePosition(p, but);
+			System.out.println("End");
 		}
 
 		Sequence<Coup> resultat = Configuration.nouvelleSequence();
