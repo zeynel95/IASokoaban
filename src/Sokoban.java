@@ -40,7 +40,10 @@ public class Sokoban {
 
 	public static void main(String[] args) {
 		InputStream in;
-		in = Configuration.ouvre("Niveaux/Tests.txt");
+		in = Configuration.ouvre("Niveaux/CurrentTest.txt");
+//		in = Configuration.ouvre("Niveaux/Microban.txt");
+//		in = Configuration.ouvre("Niveaux/Tests.txt");
+
 		Configuration.info("Niveaux trouvés");
 
 		LecteurNiveaux l = new LecteurNiveaux(in);

@@ -48,6 +48,7 @@ public class Jeu extends Observable {
 	public void joue(Coup c) {
 		n.joue(c);
 		metAJour();
+//		prochainNiveau();
 	}
 
 	public void prochainNiveau() {

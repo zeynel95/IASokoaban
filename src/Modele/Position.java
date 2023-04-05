@@ -4,6 +4,7 @@ package Modele;
 public class Position implements Comparable<Position> {
     int ligne, colonne;
     int distance;
+    int heuristique;
 
     public Position(int ligne, int colonne, int distance){
         this.colonne = colonne;
@@ -12,7 +13,8 @@ public class Position implements Comparable<Position> {
     }
 
     public int compareTo(Position other) {
-        return Integer.compare(distance, other.distance);
+
+        return Integer.compare(distance + heuristique, other.distance + other.heuristique);
     }
 
     public String toString() {

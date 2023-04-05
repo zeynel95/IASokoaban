@@ -125,6 +125,10 @@ public class ControleurMediateur implements CollecteurEvenements {
 			case "IA":
 				basculeIA();
 				break;
+			case "Next":
+				// next level
+				jeu.prochainNiveau();
+				break;
 			case "Full":
 				vue.toggleFullscreen();
 				break;

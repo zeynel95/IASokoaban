@@ -49,6 +49,9 @@ public abstract class IA {
 			case "ParcoursFixe":
 				resultat = new IAParcoursFixe();
 				break;
+			case "V1":
+				resultat = new IAV1();
+				break;
 			default:
 				Configuration.erreur("IA de type " + type + " non supportée");
 		}

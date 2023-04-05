@@ -55,6 +55,8 @@ public class Niveau implements Cloneable {
 	final int[] dx = {-1, 0, 1, 0}; // déplacement en x pour visiter les voisins
 	final int[] dy = {0, 1, 0, -1}; // déplacement en y pour visiter les voisins
 
+	final int inv_x[] = {1, 0, -1, 0};
+	final int inv_y[] = {0, -1, 0, 1};
 
 	Niveau() {
 		cases = new int[1][1];
@@ -276,37 +278,26 @@ public class Niveau implements Cloneable {
 		cases[i][j] = (cases[i][j] & 0xFF) | (m << 8);
 	}
 
-//	SequenceListe<Position> voisinsAccessibles(Position pos){
-//		int ligne = pos.ligne;
-//		int colonne = pos.colonne;
-//		SequenceListe<Position> results = new SequenceListe<Position>();
-//		if( !aMur(ligne-1,colonne) && !aCaisse(ligne-1, colonne)){
-//			// up
-//			results.insereQueue(new Position(ligne-1, colonne));
-//		}
-//		if(!aMur(ligne, colonne-1) && !aCaisse(ligne, colonne-1)){
-//			// left
-//			results.insereQueue(new Position(ligne, colonne-1));
-//		}
-//		if(!aMur(ligne, colonne-1) && !aCaisse(ligne+1, colonne)){
-//			// down
-//			results.insereQueue(new Position(ligne+1, colonne));
-//		}
-//		if(!aMur(ligne, colonne-1) && !aCaisse(ligne, colonne+1)){
-//			// right
-//			results.insereQueue(new Position(ligne, colonne+1));
-//		}
-//
-//		return results;
-//	}
-
-	SequenceListe<Position> positionCaisses(){
-		SequenceListe<Position> listeCaisse = new SequenceListe<Position>();
+	List<Position> positionCaisses(){
+		List<Position> listeCaisse = new ArrayList<Position>();
 
 		for(int ligne = 0; ligne< l; ligne++){
 			for(int colonne = 0; colonne< c; colonne++){
 				if(aCaisse(ligne, colonne)){
-					listeCaisse.insereQueue(new Position(ligne, colonne, 0));
+					listeCaisse.add(new Position(ligne, colonne, 0));
+				}
+			}
+		}
+
+		return listeCaisse;
+	}
+	List<Position> positionCaissesMalPlaces(){
+		List<Position> listeCaisse = new ArrayList<Position>();
+
+		for(int ligne = 0; ligne< l; ligne++){
+			for(int colonne = 0; colonne< c; colonne++){
+				if(aCaisse(ligne, colonne) && !aBut(ligne,colonne)){
+					listeCaisse.add(new Position(ligne, colonne, 0));
 				}
 			}
 		}
@@ -314,7 +305,34 @@ public class Niveau implements Cloneable {
 		return listeCaisse;
 	}
 
-	boolean cheminVers(Position p1, Position p2) {
+	List<Position> positionButs(){
+		List<Position> listeButs = new ArrayList<Position>();
+
+		for(int ligne = 0; ligne< l; ligne++){
+			for(int colonne = 0; colonne< c; colonne++){
+				if(aBut(ligne, colonne)){
+					listeButs.add(new Position(ligne, colonne, 0));
+				}
+			}
+		}
+
+		return listeButs;
+	}
+	List<Position> positionButsVides(){
+		List<Position> listeButs = new ArrayList<Position>();
+
+		for(int ligne = 0; ligne< l; ligne++){
+			for(int colonne = 0; colonne< c; colonne++){
+				if(aBut(ligne, colonne) && !aCaisse(ligne, colonne)){
+					listeButs.add(new Position(ligne, colonne, 0));
+				}
+			}
+		}
+
+		return listeButs;
+	}
+
+	Path cheminVers(Position p1, Position p2) {
 
 		// dijkstra
 		int[][] distances = new int[l][c]; // Tableau des distances à chaque point
@@ -326,6 +344,10 @@ public class Niveau implements Cloneable {
 		}
 		distances[p1.ligne][p1.colonne] = 0;
 		p1.distance = 0;
+//		A*
+		int delta = Math.abs(this.pousseurL - p2.ligne) + Math.abs(this.pousseurC - p2.colonne);
+
+		p1.heuristique = delta;
 		FAP.insere(p1);
 
 		while (!FAP.estVide()) {
@@ -360,6 +382,9 @@ public class Niveau implements Cloneable {
 				//
 				if (newDistance < distances[voisin.ligne][voisin.colonne]) {
 					distances[voisin.ligne][voisin.colonne] = newDistance;
+//					A*
+					delta = Math.abs(voisin.ligne - p2.ligne) + Math.abs(voisin.colonne - p2.colonne);
+					voisin.heuristique = delta;
 					voisin.distance = newDistance;
 					FAP.insere(voisin);
 				}
@@ -368,10 +393,9 @@ public class Niveau implements Cloneable {
 
 
 		if(distances[p2.ligne][p2.colonne] != 2000){
-//			affiche_dijkstra(p1, p2, distances);
-			return true;
+			return create_dijkstra(p1, p2, distances);
 		}
-		return false;
+		return null;
 
 	}
 
@@ -389,7 +413,7 @@ public class Niveau implements Cloneable {
 				continue;
 			}
 //			if accessible par dijkstra
-			if(cheminVers(pousseur, voisin)){
+			if(cheminVers(pousseur, voisin) != null){
 //				TODO correct the hardcode here
 				distances[caisse.ligne][caisse.colonne][3] = 0;
 			}
@@ -417,7 +441,7 @@ public class Niveau implements Cloneable {
 		return -1;
 	}
 
-	boolean cheminCaissePosition(Position pCaisse, Position p2) {
+	Path cheminCaissePosition(Position pCaisse, Position p2) {
 
 		// dijkstra
 		int[][][] distances = new int[l][c][4]; // Tableau des distances à chaque point
@@ -484,7 +508,7 @@ public class Niveau implements Cloneable {
 
 					// Vérification si le voisin est un obstacle
 					boolean is_oldCaisse = voisin.ligne == pCaisse.ligne && voisin.colonne == pCaisse.colonne;
-					if (aMur(voisin.ligne, voisin.colonne) || (aCaisse(voisin.ligne, voisin.colonne) && is_oldCaisse)) {
+					if (aMur(voisin.ligne, voisin.colonne) || (aCaisse(voisin.ligne, voisin.colonne) && !is_oldCaisse)) {
 						continue;
 					}
 
@@ -501,7 +525,7 @@ public class Niveau implements Cloneable {
 				niveauCloneCourant.misAJour(courant.pousseur, pCaisse, courant.caisse);
 
 				//inverse pas accessible
-				if(!niveauCloneCourant.cheminVers(courant.pousseur, pInverse))
+				if(niveauCloneCourant.cheminVers(courant.pousseur, pInverse) == null)
 					continue;
 
 //				// revert comme on etait avant
@@ -526,52 +550,62 @@ public class Niveau implements Cloneable {
 		for(int i = 0; i<4; i++){
 			if(distances[p2.ligne][p2.colonne][i] != 2000){
 				// not implemented
-				affiche_solution(pCaisse, p2, distances);
-				return true;
+				Path path = create_solution(pCaisse, p2, distances);
+				return path;
 			}
 		}
-		return false;
+		return null;
 	}
 
-	void affiche_solution(Position start, Position end, int[][][] distances){
-		List<Position> path = new ArrayList<>();
+	Path create_solution(Position start, Position end, int[][][] distances){
+		Path path = new Path();
 
 		int endColonne = end.colonne;
 		int endLigne = end.ligne;
 		int startColonne = start.colonne;
 		int startLigne = start.ligne;
 		int end_distance = 0;
+		int end_direction = -1;
+
 		// find max from the 4 directions
 		for(int i = 0; i < 4; i++){
 			int[] case_list = distances[endLigne][endColonne];
-			if(case_list[i] > end_distance && case_list[i] != 2000)
+			if(case_list[i] > end_distance && case_list[i] != 2000){
 				end_distance = distances[endLigne][endColonne][i];
-		}
-
-		while (end_distance != 0) {
-			path.add(new Position(endLigne, endColonne, end_distance));
-
-			for (int voisin_i = 0; voisin_i < 4; voisin_i++) {
-				int nx = endLigne + dx[voisin_i];
-				int ny = endColonne + dy[voisin_i];
-				if (nx < 0 || ny < 0 || nx >= l || ny >= c) {
-					continue;
-				}
-
-				for(int direction_i = 0; direction_i < 4; direction_i++){
-					if(distances[nx][ny][direction_i] == end_distance - 1){
-						endLigne = nx;
-						endColonne = ny;
-						end_distance--;
-					}
-				}
+				end_direction = i;
 			}
 		}
 
-		path.add(new Position(startLigne, startColonne, 0));
-		Collections.reverse(path);
-		System.out.println("Solution totale : " + path);
+		while (end_distance != 0) {
 
+			path.path.add(new Position(endLigne, endColonne, end_distance));
+			path.direction.add(end_direction);
+
+			// inverse
+			int nx = endLigne + inv_x[end_direction];
+			int ny = endColonne + inv_y[end_direction];
+			if (nx < 0 || ny < 0 || nx >= l || ny >= c) {
+				continue;
+			}
+
+			for(int direction_i = 0; direction_i < 4; direction_i++){
+				if(distances[nx][ny][direction_i] == end_distance - 1){
+					endLigne = nx;
+					endColonne = ny;
+					end_distance--;
+					end_direction = direction_i;
+				}
+			}
+
+
+		}
+
+		path.path.add(new Position(startLigne, startColonne, 0));
+		path.direction.add(end_direction);
+
+		Collections.reverse(path.path);
+		Collections.reverse(path.direction);
+		return path;
 	}
 
 	void misAJour(Position pousseur, Position oldCaisse, Position newCaisse){
@@ -583,36 +617,47 @@ public class Niveau implements Cloneable {
 		this.pousseurL = pousseur.ligne;
 	}
 
-	void affiche_dijkstra(Position p1, Position p2, int[][] distances){
+	Path create_dijkstra(Position p1, Position p2, int[][] distances){
 
 		// Affichage du chemin le plus court
-		List<Position> path = new ArrayList<>();
+		Path path = new Path();
 		int endColonne = p2.colonne;
 		int endLigne = p2.ligne;
 		int startColonne = p1.colonne;
 		int startLigne = p1.ligne;
-		while (!(endLigne == startLigne && endColonne == startColonne)) {
-			path.add(new Position(endLigne, endColonne, distances[endLigne][endColonne]));
-			int min = 2000;
+		int end_distance = distances[endLigne][endColonne];
+		int end_direction = -1;
+
+		while (end_distance != 0) {
+			path.path.add(new Position(endLigne, endColonne, distances[endLigne][endColonne]));
+			path.direction.add(end_direction);
+
 //			int voisinMinLigne;
 //			int voisinMinColonne;
-			for (int i = 0; i < 4; i++) {
-				int nx = endLigne + dx[i];
-				int ny = endColonne + dy[i];
+			for(int direction_i = 0; direction_i < 4; direction_i++){
+				int nx = endLigne + dx[direction_i];
+				int ny = endColonne + dy[direction_i];
 				if (nx < 0 || ny < 0 || nx >= l || ny >= c) {
 					continue;
 				}
-				if(distances[nx][ny] < min){
-					min = distances[nx][ny];
+				if(distances[nx][ny] == end_distance - 1){
 					endLigne = nx;
 					endColonne = ny;
-
+					end_direction = direction_i;
+					end_distance--;
+					//important
+					break;
 				}
 			}
 		}
-		path.add(new Position(startLigne, startColonne, distances[startLigne][startColonne]));
-		Collections.reverse(path);
-		System.out.println("Chemin le plus court : " + path);
+		path.path.add(new Position(startLigne, startColonne, distances[startLigne][startColonne]));
+		path.direction.add(end_direction);
+
+		Collections.reverse(path.path);
+		Collections.reverse(path.direction);
+
+//		System.out.println("Chemin le plus court : " + path.path);
+		return path;
 	}
 
 

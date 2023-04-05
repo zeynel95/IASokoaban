@@ -39,10 +39,11 @@ public class Configuration {
 	public static final String typeInterface = "Graphique";
 	static final String typeSequences = "Liste";
 	public static final double vitesseAnimations = 0.15;
-	public static final int lenteurPas = 15;
+	public static final int lenteurPas = 5;
 	public static final boolean animations = true;
-	public static final String IA = "Aleatoire";
-	public static int lenteurJeuAutomatique = 15;
+//	public static final String IA = "Aleatoire";
+	public static final String IA = "V1";
+	public static int lenteurJeuAutomatique = 1;
 
 	public static InputStream ouvre(String s) {
 		InputStream in = null;

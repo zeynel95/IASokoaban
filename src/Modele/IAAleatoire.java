@@ -29,6 +29,7 @@ package Modele;
 import Global.Configuration;
 import Structures.Sequence;
 import Structures.SequenceListe;
+import java.util.List;
 
 import java.util.Random;
 
@@ -44,14 +45,15 @@ class IAAleatoire extends IA {
 
 	@Override
 	public Sequence<Coup> joue() {
-		SequenceListe<Position> caisses = niveau.positionCaisses();
+		List<Position> caisses = niveau.positionCaisses();
 //		System.out.println("Printing caisses du niveau");
-		while (!caisses.estVide()){
-			Position p = caisses.extraitTete();
+		while (caisses.size() != 0){
+			Position p = caisses.get(0);
 //			System.out.println("caisse[colonne][ligne]: " + p.colonne + " " + p.ligne);
 //			Position pousseur = new Position(niveau.pousseurL, niveau.pousseurC, 0);
 //			niveau.cheminVers(pousseur, p);
 			Position but = new Position(4, 15, 0);
+//			Path path = niveau.cheminCaissePosition(p, but);
 			niveau.cheminCaissePosition(p, but);
 			System.out.println("End");
 		}
