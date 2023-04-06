@@ -145,20 +145,12 @@ class IAV1 extends IA {
         List<Position> caisses = niveau.positionCaissesMalPlaces();
         List<Position> buts = niveau.positionButsVides();
 
-        int possible_movements = 4;
-        List<CaisseMouvement> options = new ArrayList<CaisseMouvement>();
-        CaisseMouvement c1 = new CaisseMouvement(2, 3);
-        CaisseMouvement c2 = new CaisseMouvement(2, 4);
-        c1.dir[0] = 1;
-        c1.dir[2] = 1;
-        c2.dir[0] = 1;
-        c2.dir[2] = 1;
-        options.add(c1);
-        options.add(c2);
+        List<CaisseMouvement> options = getOptions(caisses);
 
-        path = force(options, caisses, buts);
+        path = generate_linear_solution(caisses, buts, this.niveau);
 
-//        path = generate_linear_solution(caisses, buts, this.niveau);
+        if(path == null)
+            path = force(options, caisses, buts);
 
 
         if(path == null){
@@ -216,6 +208,28 @@ class IAV1 extends IA {
 
             suivrePath(pousseurPosition);
         }
+    }
+
+    List<CaisseMouvement> getOptions(List<Position> caisses){
+        Position pousseur = new Position(niveau.pousseurL, niveau.pousseurC, 0);
+        List<CaisseMouvement> options = new ArrayList<CaisseMouvement>();
+
+        for(int i = 0; i<caisses.size(); i++){
+            Position caisse = caisses.get(i);
+            CaisseMouvement cm = new CaisseMouvement(caisse.ligne, caisse.colonne);
+            for(int j = 0; j < 4; j++){
+                Position voisin = new Position(caisse.ligne + dx[j], caisse.colonne + dy[j], 0);
+                if(niveau.cheminVers(pousseur, voisin) != null){
+                    boolean voisin_caisse = niveau.aCaisse(caisse.ligne + inv_x[j], caisse.colonne + inv_y[j]);
+                    boolean voisin_mur = niveau.aMur(caisse.ligne + inv_x[j], caisse.colonne + inv_y[j]);
+                    if(!voisin_caisse && !voisin_mur)
+                        cm.dir[j] = 1;
+                }
+            }
+            options.add(cm);
+        }
+
+        return options;
     }
 
     int get_invdir(int dir){
