@@ -42,6 +42,7 @@ public class Sokoban {
 		InputStream in;
 		in = Configuration.ouvre("Niveaux/CurrentTest.txt");
 //		in = Configuration.ouvre("Niveaux/Microban.txt");
+//		in = Configuration.ouvre("Niveaux/Minicosmos.txt");
 //		in = Configuration.ouvre("Niveaux/Tests.txt");
 
 		Configuration.info("Niveaux trouvés");

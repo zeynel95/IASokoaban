@@ -21,17 +21,21 @@ class IAV1 extends IA {
 
     final int inv_x[] = {1, 0, -1, 0};
     final int inv_y[] = {0, -1, 0, 1};
+
+    Sequence<Coup> resultat;
+
     public IAV1() {
 
     }
 
     Path generate_linear_solution(List<Position> caisses, List<Position> buts, Niveau niveau){
         Path path = null;
+        Position p, but;
         // look at all direct lines
         for(int caisseI = 0; caisseI<caisses.size(); caisseI++){
-            Position p = caisses.get(caisseI);
+            p = caisses.get(caisseI);
             for(int butI = 0; butI< buts.size(); butI++){
-                Position but = buts.get(butI);
+                but = buts.get(butI);
                 path = niveau.cheminCaissePosition(p, but);
                 if(path != null){
                     // we found one solution
@@ -66,24 +70,96 @@ class IAV1 extends IA {
         }
 
 
-        // we have found one direct line
-        return path;
+        return null;
+    }
+
+    Path force(List<CaisseMouvement> options, List<Position> caisses, List<Position> buts){
+        Path path = null;
+        Coup coup;
+        Position pousseur = null, case_inverse = null;
+        for(int i = 0; i < options.size(); i++){
+            // for caisse
+            CaisseMouvement current = options.get(i);
+            for(int dirI = 0; dirI < 4; dirI++){
+                // for mouvement of caisse
+                if(current.dir[dirI] != 0){
+                    Niveau new_niveau = niveau.clone();
+                    // change position caisse
+                    new_niveau.supprime(CAISSE, current.ligne, current.colonne);
+                    new_niveau.ajouteCaisse(current.ligne + dx[dirI], current.colonne + dy[dirI]);
+                    // change position pousseur
+                    int newC = current.colonne;
+                    int newL = current.ligne;
+                    new_niveau.supprime(POUSSEUR, new_niveau.pousseurL, new_niveau.pousseurC);
+                    new_niveau.ajoutePousseur(newL, newC);
+
+                    List<Position> new_caisses = new ArrayList<>(caisses);
+                    // change the caisse position in caisses
+                    for(int j = 0; j < new_caisses.size(); j++){
+                        boolean is_egal = current.colonne == new_caisses.get(j).colonne && current.ligne == new_caisses.get(j).ligne;
+                        if(is_egal) {
+                            Position np = new Position(current.ligne + dx[dirI], current.colonne + dy[dirI], 0);
+                            new_caisses.set(j, np);
+                        }
+                    }
+
+
+                    path = generate_linear_solution(new_caisses, buts, new_niveau);
+                    if(path != null){
+
+                        // actually do the move
+                        pousseur = new Position(niveau.pousseurL, niveau.pousseurC, 0);
+                        case_inverse = new Position(current.ligne + inv_x[dirI], current.colonne + inv_y[dirI], 0);
+                        // add all up until inverse
+                        Path pathMouvement1 = niveau.cheminVers(pousseur, case_inverse);
+                        // add inverse
+                        pathMouvement1.path.add(new Position(case_inverse.ligne + dx[dirI], case_inverse.colonne + dy[dirI], 0));
+
+                        // calculate inverse direction index
+                        int inv_dir = get_invdir(dirI);
+                        pathMouvement1.direction.add(pathMouvement1.direction.size()-1, inv_dir);
+
+
+                        suivrePath(pathMouvement1);
+
+
+
+                        return path;
+                    }
+
+
+                }
+            }
+        }
+        return null;
     }
 
     @Override
     public Sequence<Coup> joue() {
-        Sequence<Coup> resultat = Configuration.nouvelleSequence();
+        resultat = Configuration.nouvelleSequence();
+        System.out.println("--");
 
-        int dir_caisse, dir_pousseur;
-        Position courent, case_inverse;
-        Coup coup;
-        Path pousseurPosition, path = null;
-        Position pousseur;
+        Path path = null;
+
 
         List<Position> caisses = niveau.positionCaissesMalPlaces();
         List<Position> buts = niveau.positionButsVides();
 
-        path = generate_linear_solution(caisses, buts, this.niveau);
+        int possible_movements = 4;
+        List<CaisseMouvement> options = new ArrayList<CaisseMouvement>();
+        CaisseMouvement c1 = new CaisseMouvement(2, 3);
+        CaisseMouvement c2 = new CaisseMouvement(2, 4);
+        c1.dir[0] = 1;
+        c1.dir[2] = 1;
+        c2.dir[0] = 1;
+        c2.dir[2] = 1;
+        options.add(c1);
+        options.add(c2);
+
+        path = force(options, caisses, buts);
+
+//        path = generate_linear_solution(caisses, buts, this.niveau);
+
 
         if(path == null){
             System.out.println("No solution at all for this level!");
@@ -93,9 +169,31 @@ class IAV1 extends IA {
         }
 
         System.out.println("Solution final: " + path.path);
-        
-        for(int coup_i = -1; coup_i<1; coup_i++) {
-//        for(int coup_i = -1; coup_i<path.direction.size()-1; coup_i++) {
+        generateMovement(path);
+        return resultat;
+    }
+
+    void suivrePath(Path path){
+        System.out.println("Adding path: " + path.path + " to our list of movements");
+        Coup coup;
+        int dir_pousseur;
+        for (int i = 0; i < path.path.size()-1; i++){
+            // si on est deja dans la case ou on veut etre, on bouge pas
+            if(path.path.size() == 1) continue;
+            // si mouvement 1, il faut aller dans direction inverse
+            dir_pousseur = path.direction.get(i);
+            coup = niveau.deplace(inv_x[dir_pousseur], inv_y[dir_pousseur]);
+            resultat.insereQueue(coup);
+        }
+    }
+
+    void generateMovement(Path path){
+
+        int dir_caisse;
+        Position courent, case_inverse, pousseur;
+        Path pousseurPosition;
+
+        for(int coup_i = -1; coup_i<path.direction.size()-1; coup_i++) {
             pousseur = new Position(niveau.pousseurL, niveau.pousseurC, 0);
 //            current[i] + direction[i+1] = current[i+1]
             dir_caisse = path.direction.get(coup_i + 1);
@@ -103,31 +201,35 @@ class IAV1 extends IA {
             // pour sauter la premiere iteration ou current[-1] n'est pas definie
             if (coup_i == -1) continue;
 
+            // generate path pousseurPosition which contains the path from pousseur to inverse, and the actual move
             courent = path.path.get(coup_i);
             case_inverse = new Position(courent.ligne + inv_x[dir_caisse], courent.colonne + inv_y[dir_caisse], 0);
-            System.out.println("Prochain caisse possition: " + courent + ", il faut que pousseur soit dans" + case_inverse);
+            // add all up until inverse
             pousseurPosition = niveau.cheminVers(pousseur, case_inverse);
-            System.out.println("Pour aller a " + case_inverse + ", il faut faire: " + pousseurPosition.path + " puis on va direction: " + dir_caisse);
+            // add inverse to caisse
+            pousseurPosition.path.add(new Position(case_inverse.ligne + dx[dir_caisse], case_inverse.colonne + dy[dir_caisse], 0));
 
-            for (int i = 0; i < pousseurPosition.path.size()-1; i++){
-                // si on est deja dans la case ou on veut etre, on bouge pas
-                if(pousseurPosition.path.size() == 1) continue;
-                // si mouvement 1, il faut aller dans direction inverse
-                dir_pousseur = pousseurPosition.direction.get(i);
-                coup = niveau.deplace(inv_x[dir_pousseur], inv_y[dir_pousseur]);
-                System.out.println("MOVING: " + inv_x[dir_pousseur] + " " + inv_y[dir_pousseur]);
-                resultat.insereQueue(coup);
-            }
-            coup = niveau.deplace(dx[dir_caisse], dy[dir_caisse]);
-            System.out.println("-MOVING: " + dx[dir_caisse] + " " + dy[dir_caisse]);
-            resultat.insereQueue(coup);
+            // calculate inverse direction index
+            int inv_dir = get_invdir(dir_caisse);
+            pousseurPosition.direction.add(pousseurPosition.direction.size()-1, inv_dir);
 
 
-            System.out.println();
+            suivrePath(pousseurPosition);
         }
+    }
 
-
-
-        return resultat;
+    int get_invdir(int dir){
+        switch (dir){
+            case 0:
+                return 2;
+            case 1:
+                return 3;
+            case 2:
+                return 0;
+            case 3:
+                return 1;
+        }
+        return -1;
     }
 }
+
